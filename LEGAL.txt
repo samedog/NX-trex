@@ -1,0 +1,18 @@
+Vectrex BIOS / System ROM Notice
+================================
+
+The file rom.dat in this project is a dump of the Vectrex system BIOS,
+which also contains the built-in game "Mine Storm".
+
+Copyright (c) Smith Engineering / Jay Smith.
+
+Smith Engineering has granted the Vectrex community permission to copy
+and distribute all Vectrex-related materials (BIOS, games, manuals, and
+other documentation) for NON-COMMERCIAL purposes only.
+
+This emulator (NX-trex) is a non-commercial homebrew project and is
+distributed free of charge. The BIOS is included solely to make the
+emulator functional on real hardware.
+
+If you are the rights holder and wish this file to be removed, please
+contact the repository maintainer and it will be taken down immediately.

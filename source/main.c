@@ -1,0 +1,502 @@
+#include <switch.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <dirent.h>
+#include <ctype.h>
+#include "vecx.h"
+#include "osint.h"
+#include "e8910.h"
+#include <sys/stat.h>
+#include <errno.h>
+//#include <math.h>
+
+/* ================= font8x8_basic (public domain, Daniel Hepper) ================= */
+
+static const uint8_t font8x8_basic[128][8] = {
+    [0x20] = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },
+    [0x21] = { 0x18,0x3C,0x3C,0x18,0x18,0x00,0x18,0x00 },
+    [0x22] = { 0x36,0x36,0x00,0x00,0x00,0x00,0x00,0x00 },
+    [0x23] = { 0x36,0x36,0x7F,0x36,0x7F,0x36,0x36,0x00 },
+    [0x24] = { 0x0C,0x3E,0x03,0x1E,0x30,0x1F,0x0C,0x00 },
+    [0x25] = { 0x00,0x63,0x33,0x18,0x0C,0x66,0x63,0x00 },
+    [0x26] = { 0x1C,0x36,0x1C,0x6E,0x3B,0x33,0x6E,0x00 },
+    [0x27] = { 0x06,0x06,0x03,0x00,0x00,0x00,0x00,0x00 },
+    [0x28] = { 0x18,0x0C,0x06,0x06,0x06,0x0C,0x18,0x00 },
+    [0x29] = { 0x06,0x0C,0x18,0x18,0x18,0x0C,0x06,0x00 },
+    [0x2A] = { 0x00,0x66,0x3C,0xFF,0x3C,0x66,0x00,0x00 },
+    [0x2B] = { 0x00,0x0C,0x0C,0x3F,0x0C,0x0C,0x00,0x00 },
+    [0x2C] = { 0x00,0x00,0x00,0x00,0x00,0x0C,0x0C,0x06 },
+    [0x2D] = { 0x00,0x00,0x00,0x3F,0x00,0x00,0x00,0x00 },
+    [0x2E] = { 0x00,0x00,0x00,0x00,0x00,0x0C,0x0C,0x00 },
+    [0x2F] = { 0x60,0x30,0x18,0x0C,0x06,0x03,0x01,0x00 },
+    [0x30] = { 0x3E,0x63,0x73,0x7B,0x6F,0x67,0x3E,0x00 },
+    [0x31] = { 0x0C,0x0E,0x0C,0x0C,0x0C,0x0C,0x3F,0x00 },
+    [0x32] = { 0x1E,0x33,0x30,0x1C,0x06,0x33,0x3F,0x00 },
+    [0x33] = { 0x1E,0x33,0x30,0x1C,0x30,0x33,0x1E,0x00 },
+    [0x34] = { 0x38,0x3C,0x36,0x33,0x7F,0x30,0x78,0x00 },
+    [0x35] = { 0x3F,0x03,0x1F,0x30,0x30,0x33,0x1E,0x00 },
+    [0x36] = { 0x1C,0x06,0x03,0x1F,0x33,0x33,0x1E,0x00 },
+    [0x37] = { 0x3F,0x33,0x30,0x18,0x0C,0x0C,0x0C,0x00 },
+    [0x38] = { 0x1E,0x33,0x33,0x1E,0x33,0x33,0x1E,0x00 },
+    [0x39] = { 0x1E,0x33,0x33,0x3E,0x30,0x18,0x0E,0x00 },
+    [0x3A] = { 0x00,0x0C,0x0C,0x00,0x00,0x0C,0x0C,0x00 },
+    [0x3B] = { 0x00,0x0C,0x0C,0x00,0x00,0x0C,0x0C,0x06 },
+    [0x3C] = { 0x18,0x0C,0x06,0x03,0x06,0x0C,0x18,0x00 },
+    [0x3D] = { 0x00,0x00,0x3F,0x00,0x00,0x3F,0x00,0x00 },
+    [0x3E] = { 0x06,0x0C,0x18,0x30,0x18,0x0C,0x06,0x00 },
+    [0x3F] = { 0x1E,0x33,0x30,0x18,0x0C,0x00,0x0C,0x00 },
+    [0x40] = { 0x3E,0x63,0x7B,0x7B,0x7B,0x03,0x1E,0x00 },
+    [0x41] = { 0x0C,0x1E,0x33,0x33,0x3F,0x33,0x33,0x00 },
+    [0x42] = { 0x3F,0x66,0x66,0x3E,0x66,0x66,0x3F,0x00 },
+    [0x43] = { 0x3C,0x66,0x03,0x03,0x03,0x66,0x3C,0x00 },
+    [0x44] = { 0x1F,0x36,0x66,0x66,0x66,0x36,0x1F,0x00 },
+    [0x45] = { 0x7F,0x46,0x16,0x1E,0x16,0x46,0x7F,0x00 },
+    [0x46] = { 0x7F,0x46,0x16,0x1E,0x16,0x06,0x0F,0x00 },
+    [0x47] = { 0x3C,0x66,0x03,0x03,0x73,0x66,0x7C,0x00 },
+    [0x48] = { 0x33,0x33,0x33,0x3F,0x33,0x33,0x33,0x00 },
+    [0x49] = { 0x1E,0x0C,0x0C,0x0C,0x0C,0x0C,0x1E,0x00 },
+    [0x4A] = { 0x78,0x30,0x30,0x30,0x33,0x33,0x1E,0x00 },
+    [0x4B] = { 0x67,0x66,0x36,0x1E,0x36,0x66,0x67,0x00 },
+    [0x4C] = { 0x0F,0x06,0x06,0x06,0x46,0x66,0x7F,0x00 },
+    [0x4D] = { 0x63,0x77,0x7F,0x7F,0x6B,0x63,0x63,0x00 },
+    [0x4E] = { 0x63,0x67,0x6F,0x7B,0x73,0x63,0x63,0x00 },
+    [0x4F] = { 0x1C,0x36,0x63,0x63,0x63,0x36,0x1C,0x00 },
+    [0x50] = { 0x3F,0x66,0x66,0x3E,0x06,0x06,0x0F,0x00 },
+    [0x51] = { 0x1E,0x33,0x33,0x33,0x3B,0x1E,0x38,0x00 },
+    [0x52] = { 0x3F,0x66,0x66,0x3E,0x36,0x66,0x67,0x00 },
+    [0x53] = { 0x1E,0x33,0x07,0x0E,0x38,0x33,0x1E,0x00 },
+    [0x54] = { 0x3F,0x2D,0x0C,0x0C,0x0C,0x0C,0x1E,0x00 },
+    [0x55] = { 0x33,0x33,0x33,0x33,0x33,0x33,0x3F,0x00 },
+    [0x56] = { 0x33,0x33,0x33,0x33,0x33,0x1E,0x0C,0x00 },
+    [0x57] = { 0x63,0x63,0x63,0x6B,0x7F,0x77,0x63,0x00 },
+    [0x58] = { 0x63,0x63,0x36,0x1C,0x1C,0x36,0x63,0x00 },
+    [0x59] = { 0x33,0x33,0x33,0x1E,0x0C,0x0C,0x1E,0x00 },
+    [0x5A] = { 0x7F,0x63,0x31,0x18,0x4C,0x66,0x7F,0x00 },
+    [0x5B] = { 0x1E,0x06,0x06,0x06,0x06,0x06,0x1E,0x00 },
+    [0x5C] = { 0x03,0x06,0x0C,0x18,0x30,0x60,0x40,0x00 },
+    [0x5D] = { 0x1E,0x18,0x18,0x18,0x18,0x18,0x1E,0x00 },
+    [0x5E] = { 0x08,0x1C,0x36,0x63,0x00,0x00,0x00,0x00 },
+    [0x5F] = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF },
+    [0x60] = { 0x0C,0x0C,0x18,0x00,0x00,0x00,0x00,0x00 },
+    [0x61] = { 0x00,0x00,0x1E,0x30,0x3E,0x33,0x6E,0x00 },
+    [0x62] = { 0x07,0x06,0x06,0x3E,0x66,0x66,0x3B,0x00 },
+    [0x63] = { 0x00,0x00,0x1E,0x33,0x03,0x33,0x1E,0x00 },
+    [0x64] = { 0x38,0x30,0x30,0x3E,0x33,0x33,0x6E,0x00 },
+    [0x65] = { 0x00,0x00,0x1E,0x33,0x3F,0x03,0x1E,0x00 },
+    [0x66] = { 0x1C,0x36,0x06,0x0F,0x06,0x06,0x0F,0x00 },
+    [0x67] = { 0x00,0x00,0x6E,0x33,0x33,0x3E,0x30,0x1F },
+    [0x68] = { 0x07,0x06,0x36,0x6E,0x66,0x66,0x67,0x00 },
+    [0x69] = { 0x0C,0x00,0x0E,0x0C,0x0C,0x0C,0x1E,0x00 },
+    [0x6A] = { 0x30,0x00,0x30,0x30,0x30,0x33,0x33,0x1E },
+    [0x6B] = { 0x07,0x06,0x66,0x36,0x1E,0x36,0x67,0x00 },
+    [0x6C] = { 0x0E,0x0C,0x0C,0x0C,0x0C,0x0C,0x1E,0x00 },
+    [0x6D] = { 0x00,0x00,0x33,0x7F,0x7F,0x6B,0x63,0x00 },
+    [0x6E] = { 0x00,0x00,0x1F,0x33,0x33,0x33,0x33,0x00 },
+    [0x6F] = { 0x00,0x00,0x1E,0x33,0x33,0x33,0x1E,0x00 },
+    [0x70] = { 0x00,0x00,0x3B,0x66,0x66,0x3E,0x06,0x0F },
+    [0x71] = { 0x00,0x00,0x6E,0x33,0x33,0x3E,0x30,0x78 },
+    [0x72] = { 0x00,0x00,0x3B,0x6E,0x66,0x06,0x0F,0x00 },
+    [0x73] = { 0x00,0x00,0x3E,0x03,0x1E,0x30,0x1F,0x00 },
+    [0x74] = { 0x08,0x0C,0x3E,0x0C,0x0C,0x2C,0x18,0x00 },
+    [0x75] = { 0x00,0x00,0x33,0x33,0x33,0x33,0x6E,0x00 },
+    [0x76] = { 0x00,0x00,0x33,0x33,0x33,0x1E,0x0C,0x00 },
+    [0x77] = { 0x00,0x00,0x63,0x6B,0x7F,0x7F,0x36,0x00 },
+    [0x78] = { 0x00,0x00,0x63,0x36,0x1C,0x36,0x63,0x00 },
+    [0x79] = { 0x00,0x00,0x33,0x33,0x33,0x3E,0x30,0x1F },
+    [0x7A] = { 0x00,0x00,0x3F,0x19,0x0C,0x26,0x3F,0x00 },
+    [0x7B] = { 0x38,0x0C,0x0C,0x07,0x0C,0x0C,0x38,0x00 },
+    [0x7C] = { 0x18,0x18,0x18,0x00,0x18,0x18,0x18,0x00 },
+    [0x7D] = { 0x07,0x0C,0x0C,0x38,0x0C,0x0C,0x07,0x00 },
+    [0x7E] = { 0x6E,0x3B,0x00,0x00,0x00,0x00,0x00,0x00 },
+};
+
+/* ================= menu state ================= */
+
+enum menu_state { MENU_MAIN, MENU_CARTS, MENU_EMU };
+
+typedef struct {
+    char name[64];
+    char path[300];
+} cart_entry;
+
+#define MAX_CARTS 64
+#define SCR_W 1280
+#define SCR_H 720
+#define CHAR_W 8
+#define CHAR_H 8
+#define FONT_SCALE 4
+#define WHITE RGBA8_MAXALPHA(255, 255, 255)
+
+static cart_entry carts[MAX_CARTS];
+static int        cart_count = 0;
+static int        menu_sel   = 0;
+static int        cart_top   = 0;
+static enum menu_state state = MENU_MAIN;
+
+static u32 *g_buf = NULL;
+static u32  g_stride = 0;
+
+/* ================= drawing helpers ================= */
+static inline void fb_pixel(int x, int y, u32 color)
+{
+    if (!g_buf) return;
+    if (x < 0 || x >= SCR_W || y < 0 || y >= SCR_H) return;
+    g_buf[(y * (g_stride / 4)) + x] = color;
+}
+
+static void fb_hline(int x0, int x1, int y, u32 color)
+{
+    if (!g_buf) return;
+    if (y < 0 || y >= SCR_H) return;
+    if (x0 < 0) x0 = 0;
+    if (x1 > SCR_W - 1) x1 = SCR_W - 1;
+    for (int x = x0; x <= x1; x++)
+        g_buf[(y * (g_stride / 4)) + x] = color;
+}
+
+static inline unsigned isqrt32(unsigned x)
+{
+    unsigned r = 0;
+    unsigned bit = 1u << 30;
+    while (bit > x) bit >>= 2;
+    while (bit != 0) {
+        if (x >= r + bit) {
+            x -= r + bit;
+            r = (r >> 1) + bit;
+        } else {
+            r >>= 1;
+        }
+        bit >>= 2;
+    }
+    return r;
+}
+
+static inline unsigned curve15(unsigned n)
+{
+    /* want n^1.5 scaled. n^1.5 = n * sqrt(n).
+     * sqrt(n) in 0..181 (since 181^2 ~= 32761).
+     * n * sqrt(n) / 181 to bring it back to 0..32767. */
+    unsigned r = isqrt32(n);                 /* 0..181 */
+    return (unsigned)(((unsigned long)n * r) / 181);
+}
+
+static void draw_char(int x, int y, char c, u32 color)
+{
+    unsigned char uc = (unsigned char)c;
+    if (uc > 0x7E) uc = '?';
+    if (uc < 0x20) uc = ' ';
+    const uint8_t *glyph = font8x8_basic[uc];
+    for (int row = 0; row < CHAR_H; row++) {
+        uint8_t bits = glyph[row];
+        for (int col = 0; col < CHAR_W; col++) {
+            if (bits & (1 << col)) {
+                for (int sy = 0; sy < FONT_SCALE; sy++) {
+                    for (int sx = 0; sx < FONT_SCALE; sx++) {
+                        fb_pixel(x + col * FONT_SCALE + sx,
+                                 y + row * FONT_SCALE + sy,
+                                 color);
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+static void draw_text(int x, int y, const char *s, u32 color)
+{
+    while (*s) {
+        draw_char(x, y, *s, color);
+        x += CHAR_W * FONT_SCALE;
+        s++;
+    }
+}
+
+static int text_width(const char *s)
+{
+    int n = 0;
+    while (*s++) n++;
+    return n * CHAR_W * FONT_SCALE;
+}
+
+static void draw_text_centered(int cx, int y, const char *s, u32 color)
+{
+    draw_text(cx - text_width(s) / 2, y, s, color);
+}
+
+/* ================= cart scanning / loading ================= */
+
+static void scan_carts(void)
+{
+    cart_count = 0;
+    DIR *d = opendir("sdmc:/NX-trex/roms");
+    if (!d) return;
+    struct dirent *ent;
+    while ((ent = readdir(d)) != NULL && cart_count < MAX_CARTS) {
+        const char *n = ent->d_name;
+        size_t len = strlen(n);
+        if (len < 5) continue;
+
+        const char *ext = n + len - 4;
+        if (strcasecmp(ext, ".vec") != 0 && strcasecmp(ext, ".bin") != 0)
+            continue;
+
+        snprintf(carts[cart_count].path, sizeof(carts[cart_count].path),
+                 "sdmc:/NX-trex/roms/%s", n);
+
+        size_t j;
+        for (j = 0; j < len && j < sizeof(carts[cart_count].name) - 1; j++)
+            carts[cart_count].name[j] = (char)toupper((unsigned char)n[j]);
+        carts[cart_count].name[j] = '\0';
+        cart_count++;
+    }
+    closedir(d);
+}
+
+static int load_cart(const char *path)
+{
+    FILE *f = fopen(path, "rb");
+    if (!f) return 0;
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (sz != 4096 && sz != 8192 && sz != 16384 && sz != 32768) {
+        fclose(f);
+        return 0;
+    }
+    size_t n = fread(cart, 1, (size_t)sz, f);
+    fclose(f);
+    if (n != (size_t)sz) return 0;
+    cart_size = (unsigned)sz;
+    cart_mask = cart_size - 1;
+    return 1;
+}
+
+static void clear_cart(void)
+{
+    cart_size = 0;
+    cart_mask = 0;
+    memset(cart, 0, sizeof(cart));
+}
+
+/* ================= menu rendering ================= */
+
+static void render_main_menu(void){
+    const char *items[] = { "RUN MINE STORM", "LOAD CART", "EXIT" };
+    const int n_items = 3;
+    const int cell  = CHAR_W * FONT_SCALE;
+    const int slot  = cell * (2 + 14);        // "> " + "RUN MINE STORM"
+    const int x0    = SCR_W / 2 - slot / 2;
+
+    draw_text_centered(SCR_W / 2, 120, "VECTREX", WHITE);
+    fb_hline(SCR_W / 2 - 400, SCR_W / 2 + 400, 180, WHITE);
+
+    for (int i = 0; i < n_items; i++) {
+        int y = 300 + i * 64;
+        const char *prefix = (i == menu_sel) ? "> " : "  ";
+        draw_text(x0,                  y, prefix, WHITE);
+        draw_text(x0 + 2 * cell,       y, items[i], WHITE);
+    }
+}
+
+static void render_cart_menu(void)
+{
+    draw_text_centered(SCR_W / 2, 80, "VECTREX - CARTS", WHITE);
+    fb_hline(SCR_W / 2 - 400, SCR_W / 2 + 400, 140, WHITE);
+
+    const int cell     = CHAR_W * FONT_SCALE;
+    const int slot     = cell * (2 + 24);         /* "> " + up to 24-char names */
+    const int x0       = SCR_W / 2 - slot / 2;
+    const int top_y    = 200;
+    const int row_h    = 48;
+    const int max_rows = 8;
+    const int back_y   = top_y + max_rows * row_h + 20;
+    
+    if (cart_count == 0) {
+        draw_text_centered(SCR_W / 2, 320, "(NO CARTS FOUND)", WHITE);
+        draw_text_centered(SCR_W / 2, 380, "PUT .VEC FILES IN", WHITE);
+        draw_text_centered(SCR_W / 2, 430, "SD:/NX-TREX/ROMS/", WHITE);
+        int y = 520;
+        draw_text(x0, y, "> ", WHITE);
+        draw_text(x0 + 2 * cell, y, "BACK", WHITE);
+        return;
+    }
+
+
+
+
+
+    if (menu_sel < cart_top) cart_top = menu_sel;
+    if (menu_sel >= cart_top + max_rows) cart_top = menu_sel - max_rows + 1;
+
+    int rows = cart_count < max_rows ? cart_count : max_rows;
+    for (int i = 0; i < rows; i++) {
+        int idx = cart_top + i;
+        int y = top_y + i * row_h;
+        const char *prefix = (idx == menu_sel) ? "> " : "  ";
+        draw_text(x0,            y, prefix, WHITE);
+        draw_text(x0 + 2 * cell, y, carts[idx].name, WHITE);
+    }
+
+    int back_idx = cart_count;
+    const char *bprefix = (menu_sel == back_idx) ? "> " : "  ";
+    draw_text(x0,            back_y, bprefix, WHITE);
+    draw_text(x0 + 2 * cell, back_y, "BACK", WHITE);
+}
+// Returns 1 if we just transitioned into MENU_EMU this frame.
+
+static int handle_menu_input(u64 k_down){
+    if (state == MENU_MAIN) {
+        if (k_down & HidNpadButton_Up)   { if (menu_sel > 0) menu_sel--; }
+        if (k_down & HidNpadButton_Down) { if (menu_sel < 2) menu_sel++; }
+
+        if (k_down & HidNpadButton_A) {
+            if (menu_sel == 0) {
+                clear_cart();
+                vecx_reset();
+                state = MENU_EMU;
+                return 1;
+            } else if (menu_sel == 1) {
+                state = MENU_CARTS;
+                menu_sel = 0;
+                cart_top = 0;
+            }
+            // menu_sel == 2 (EXIT)
+        }
+    } else if (state == MENU_CARTS) {
+        int n_items = cart_count + 1;
+
+        if (k_down & HidNpadButton_Up)   { if (menu_sel > 0) menu_sel--; }
+        if (k_down & HidNpadButton_Down) { if (menu_sel < n_items - 1) menu_sel++; }
+
+        if (k_down & HidNpadButton_B) {
+            state = MENU_MAIN;
+            menu_sel = 0;
+        }
+
+        if (k_down & HidNpadButton_A) {
+            if (menu_sel == cart_count) {
+                state = MENU_MAIN;
+                menu_sel = 0;
+            } else if (cart_count > 0) {
+                if (load_cart(carts[menu_sel].path)) {
+                    vecx_reset();
+                    state = MENU_EMU;
+                    return 1;
+                }
+                // failed: stay in menu
+            }
+        }
+    }
+    return 0;
+}
+
+// MAIN
+
+int main(int argc, char **argv)
+{
+    romfsInit();
+    // ensure sdmc:/NX-trex/roms exists.
+    mkdir("sdmc:/NX-trex", 0755);
+    mkdir("sdmc:/NX-trex/roms", 0755);
+    osint_init();
+
+    padConfigureInput(1, HidNpadStyleSet_NpadStandard);
+    PadState pad;
+    padInitializeDefault(&pad);
+
+    FILE *f = fopen("romfs:/rom.dat", "rb");
+    if (!f) { osint_exit(); romfsExit(); return 1; }
+    size_t n = fread(rom, 1, sizeof(rom), f);
+    fclose(f);
+    if (n != sizeof(rom)) { osint_exit(); romfsExit(); return 1; }
+
+    scan_carts();
+    e8910_init_sound();
+
+    const u64 TICKS_PER_FRAME = armGetSystemTickFreq() / 30;
+    u64 next = armGetSystemTick();
+
+    int exit_requested = 0;
+
+    while (appletMainLoop()) {
+        padUpdate(&pad);
+        u64 k_down = padGetButtonsDown(&pad);
+
+        if (k_down & HidNpadButton_Plus) { 
+            exit_requested = 1; 
+        }
+
+        if (state == MENU_EMU) {
+            u64 k = padGetButtons(&pad);
+            HidAnalogStickState stick = padGetStickPos(&pad, 0);
+            const int DEADZONE = 5000;
+
+            int sx = stick.x;
+            int sy = stick.y;
+
+            if (sx > -DEADZONE && sx < DEADZONE) sx = 0;
+            if (sy > -DEADZONE && sy < DEADZONE) sy = 0;
+
+            /* Sign-magnitude curve, then remap -32767..32767 to 0..255 */
+            unsigned ax = (sx < 0) ? (unsigned)(-sx) : (unsigned)sx;
+            unsigned ay = (sy < 0) ? (unsigned)(-sy) : (unsigned)sy;
+
+            ax = curve15(ax);
+            ay = curve15(ay);
+
+            int cx = (sx < 0) ? -(int)ax : (int)ax;
+            int cy = (sy < 0) ? -(int)ay : (int)ay;
+
+            alg_jch0 = (unsigned)(((cx + 32768) * 255) / 65535);
+            alg_jch1 = (unsigned)(((cy + 32768) * 255) / 65535);
+
+            uint8_t btns = 0xFF;
+            if (k & HidNpadButton_A) btns &= ~0x01;
+            if (k & HidNpadButton_B) btns &= ~0x02;
+            if (k & HidNpadButton_X) btns &= ~0x04;
+            if (k & HidNpadButton_Y) btns &= ~0x08;
+            snd_regs[14] = btns;
+
+            if (k_down & HidNpadButton_Minus) {
+                state = MENU_MAIN;
+                menu_sel = 0;
+            } else {
+                vecx_emu(50000);   // calls osint_render internally
+                e8910_update();
+            }
+        } else {
+            // ---- menu tick
+            handle_menu_input(k_down);
+            if (state == MENU_MAIN && (k_down & HidNpadButton_A) && menu_sel == 2)
+                exit_requested = 1;
+
+            if (!exit_requested && state != MENU_EMU) {
+                g_buf = osint_begin_ui(&g_stride);
+                if (g_buf) {
+                    if (state == MENU_MAIN)       render_main_menu();
+                    else if (state == MENU_CARTS) render_cart_menu();
+                    osint_end_ui();
+                }
+                g_buf = NULL;
+            }
+        }
+
+        if (exit_requested) break;
+
+        next += TICKS_PER_FRAME;
+        u64 now = armGetSystemTick();
+        if (now < next) {
+            u64 ns = (next - now) * 1000000000ULL / armGetSystemTickFreq();
+            svcSleepThread(ns);
+        } else {
+            next = now;
+        }
+    }
+
+    e8910_done_sound();
+    osint_exit();
+    romfsExit();
+    return 0;
+}
