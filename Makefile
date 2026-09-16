@@ -40,7 +40,8 @@ include $(DEVKITPRO)/libnx/switch_rules
 APP_TITLE   := NX-trex
 APP_AUTHOR  := The Samedog
 APP_VERSION := 1.0.0
-TARGET      := NXtrex
+APP_ICON    := $(TOPDIR)/icon.png
+TARGET      := NX-trex
 BUILD       := build
 SOURCES     := source
 DATA        := data
