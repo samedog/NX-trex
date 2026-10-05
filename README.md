@@ -28,6 +28,7 @@ See [`LEGAL.txt`](LEGAL.txt) for full details.
 - Built-in BIOS with Mine Storm
 - Native Switch menu with cart browser
 - Analog stick input with response curve for precision games
+- 2-player mode (one sideways Joy-Con each; menu driven by Player 1)
 - SD card cart loading
 - Sound via AY-3-8912 emulation
 
@@ -38,7 +39,7 @@ See [`LEGAL.txt`](LEGAL.txt) for full details.
 
 ## Installation
 
-1. Copy `NXtrex.nro` to `sdmc:/switch/` on your SD card.
+1. Copy `NX-trex.nro` to `sdmc:/switch/` on your SD card.
 2. (Optional) Create `sdmc:/NX-trex/roms/` and drop `.vec` files there.
 3. Launch NX-trex from the homebrew menu.
 
@@ -51,16 +52,48 @@ On startup you'll see the main menu:
 
 - **RUN MINE STORM** - boot the built-in game from the BIOS
 - **LOAD CART** - browse and load `.vec` files from `sdmc:/NX-trex/roms/`
+- **2P MODE: ON / OFF** - toggle 2-player mode
 - **EXIT** - quit to the homebrew menu
 
 ### Controls
 
+1 Player mode:
+
 | Switch            | Vectrex         |
 |-------------------|-----------------|
 | Left analog stick | Analog joystick |
-| A / B / X / Y     | 1 / 2 / 3 / 4   |
-| Minus             | Return to menu  |
-| Plus              | Quit            |
+| B / A / Y / X     | 1 / 2 / 3 / 4   |
+| L (or Minus)      | Return to menu  |
+| R (or Plus)       | Quit            |
+
+
+2 Player mode (each player holds one Joy-Con sideways: Joy-Con L is rotated -90°, Joy-Con R is rotated +90°):
+
+| Joycon L (Player 1)                              | Vectrex         |
+|--------------------------------------------------|-----------------|
+| Left analog stick                                | Analog joystick |
+| left(down) / down(right) / up(left) / right(up)  | 1 / 2 / 3 / 4   |
+| SL (or Minus)                                    | Return to menu  |
+| SR (or Plus)                                     | Quit            |
+
+| Joycon R (Player 2)       | Vectrex         |
+|---------------------------|-----------------|
+| Right analog stick        | Analog joystick |
+| A / X / B / Y             | 1 / 2 / 3 / 4   |
+
+### Menu
+
+The menu is always driven by **Player 1**. In 2P mode Player 1 is the
+**Left Joy-Con** (held sideways); the Right Joy-Con (Player 2) is not used
+by the menu. Navigation is with the analog stick only.
+
+| Action          | 1P mode      | 2P mode (Player 1 = Left Joy-Con) |
+|-----------------|--------------|-----------------------------------|
+| Move            | Left stick   | Left stick (rotated)              |
+| Confirm (btn 4) | X            | D-Pad Right                       |
+| Back (btn 1)    | B            | D-Pad Left                        |
+| Return to menu  | L (or Minus) | SL (or Minus)                     |
+| Quit            | R (or Plus)  | SR (or Plus)                      |
 
 ## Building
 
@@ -84,13 +117,13 @@ the emulator core itself has been modified in a few places.
 
 ### Sound (e8910)
 
-- Resampled the AY-3-8912 output to the Switch's native audio rate
-  so it plays through the standard libnx audio path without an
-  external mixer library.
-- Added a per-frame `e8910_update()` hook so the audio buffer
-  drains in step with the emulator loop rather than free-running.
-- Register writes are still bit-identical to upstream; only the
-  output stage is different.
+- The AY-3-8912 core is unchanged; only the output stage differs.
+- The mixer output (`0..4095`, the volume domain) is scaled by 8 to fill
+  signed 16-bit range, then fed to the standard libnx `audout` path at its
+  native 48 kHz (mono duplicated to stereo), with no external mixer.
+- `e8910_update()` drains every free buffer each 30 fps frame. The device
+  consumes about 1.5 buffers per frame, so refilling only one starved the
+  queue; draining all released buffers keeps it fed.
 
 ### Everything else
 
@@ -100,8 +133,8 @@ mapper are unchanged from VecX and behave identically.
 
 ### TODO
 
-- Better sound emulation
-- 2-player mode
+- Verify sound against more carts (Armor Attack and similar)
+- Centre the audio output to remove the DC offset / note-onset transients
 - Test with more carts, especially edge cases (unusual sizes, non-standard headers)
 
 ## Credits

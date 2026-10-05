@@ -7,111 +7,13 @@
 #include "vecx.h"
 #include "osint.h"
 #include "e8910.h"
+#include "font8x8.h"
+#include "ui.h"
 #include <sys/stat.h>
 #include <errno.h>
 //#include <math.h>
 
-/* ================= font8x8_basic (public domain, Daniel Hepper) ================= */
-
-static const uint8_t font8x8_basic[128][8] = {
-    [0x20] = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },
-    [0x21] = { 0x18,0x3C,0x3C,0x18,0x18,0x00,0x18,0x00 },
-    [0x22] = { 0x36,0x36,0x00,0x00,0x00,0x00,0x00,0x00 },
-    [0x23] = { 0x36,0x36,0x7F,0x36,0x7F,0x36,0x36,0x00 },
-    [0x24] = { 0x0C,0x3E,0x03,0x1E,0x30,0x1F,0x0C,0x00 },
-    [0x25] = { 0x00,0x63,0x33,0x18,0x0C,0x66,0x63,0x00 },
-    [0x26] = { 0x1C,0x36,0x1C,0x6E,0x3B,0x33,0x6E,0x00 },
-    [0x27] = { 0x06,0x06,0x03,0x00,0x00,0x00,0x00,0x00 },
-    [0x28] = { 0x18,0x0C,0x06,0x06,0x06,0x0C,0x18,0x00 },
-    [0x29] = { 0x06,0x0C,0x18,0x18,0x18,0x0C,0x06,0x00 },
-    [0x2A] = { 0x00,0x66,0x3C,0xFF,0x3C,0x66,0x00,0x00 },
-    [0x2B] = { 0x00,0x0C,0x0C,0x3F,0x0C,0x0C,0x00,0x00 },
-    [0x2C] = { 0x00,0x00,0x00,0x00,0x00,0x0C,0x0C,0x06 },
-    [0x2D] = { 0x00,0x00,0x00,0x3F,0x00,0x00,0x00,0x00 },
-    [0x2E] = { 0x00,0x00,0x00,0x00,0x00,0x0C,0x0C,0x00 },
-    [0x2F] = { 0x60,0x30,0x18,0x0C,0x06,0x03,0x01,0x00 },
-    [0x30] = { 0x3E,0x63,0x73,0x7B,0x6F,0x67,0x3E,0x00 },
-    [0x31] = { 0x0C,0x0E,0x0C,0x0C,0x0C,0x0C,0x3F,0x00 },
-    [0x32] = { 0x1E,0x33,0x30,0x1C,0x06,0x33,0x3F,0x00 },
-    [0x33] = { 0x1E,0x33,0x30,0x1C,0x30,0x33,0x1E,0x00 },
-    [0x34] = { 0x38,0x3C,0x36,0x33,0x7F,0x30,0x78,0x00 },
-    [0x35] = { 0x3F,0x03,0x1F,0x30,0x30,0x33,0x1E,0x00 },
-    [0x36] = { 0x1C,0x06,0x03,0x1F,0x33,0x33,0x1E,0x00 },
-    [0x37] = { 0x3F,0x33,0x30,0x18,0x0C,0x0C,0x0C,0x00 },
-    [0x38] = { 0x1E,0x33,0x33,0x1E,0x33,0x33,0x1E,0x00 },
-    [0x39] = { 0x1E,0x33,0x33,0x3E,0x30,0x18,0x0E,0x00 },
-    [0x3A] = { 0x00,0x0C,0x0C,0x00,0x00,0x0C,0x0C,0x00 },
-    [0x3B] = { 0x00,0x0C,0x0C,0x00,0x00,0x0C,0x0C,0x06 },
-    [0x3C] = { 0x18,0x0C,0x06,0x03,0x06,0x0C,0x18,0x00 },
-    [0x3D] = { 0x00,0x00,0x3F,0x00,0x00,0x3F,0x00,0x00 },
-    [0x3E] = { 0x06,0x0C,0x18,0x30,0x18,0x0C,0x06,0x00 },
-    [0x3F] = { 0x1E,0x33,0x30,0x18,0x0C,0x00,0x0C,0x00 },
-    [0x40] = { 0x3E,0x63,0x7B,0x7B,0x7B,0x03,0x1E,0x00 },
-    [0x41] = { 0x0C,0x1E,0x33,0x33,0x3F,0x33,0x33,0x00 },
-    [0x42] = { 0x3F,0x66,0x66,0x3E,0x66,0x66,0x3F,0x00 },
-    [0x43] = { 0x3C,0x66,0x03,0x03,0x03,0x66,0x3C,0x00 },
-    [0x44] = { 0x1F,0x36,0x66,0x66,0x66,0x36,0x1F,0x00 },
-    [0x45] = { 0x7F,0x46,0x16,0x1E,0x16,0x46,0x7F,0x00 },
-    [0x46] = { 0x7F,0x46,0x16,0x1E,0x16,0x06,0x0F,0x00 },
-    [0x47] = { 0x3C,0x66,0x03,0x03,0x73,0x66,0x7C,0x00 },
-    [0x48] = { 0x33,0x33,0x33,0x3F,0x33,0x33,0x33,0x00 },
-    [0x49] = { 0x1E,0x0C,0x0C,0x0C,0x0C,0x0C,0x1E,0x00 },
-    [0x4A] = { 0x78,0x30,0x30,0x30,0x33,0x33,0x1E,0x00 },
-    [0x4B] = { 0x67,0x66,0x36,0x1E,0x36,0x66,0x67,0x00 },
-    [0x4C] = { 0x0F,0x06,0x06,0x06,0x46,0x66,0x7F,0x00 },
-    [0x4D] = { 0x63,0x77,0x7F,0x7F,0x6B,0x63,0x63,0x00 },
-    [0x4E] = { 0x63,0x67,0x6F,0x7B,0x73,0x63,0x63,0x00 },
-    [0x4F] = { 0x1C,0x36,0x63,0x63,0x63,0x36,0x1C,0x00 },
-    [0x50] = { 0x3F,0x66,0x66,0x3E,0x06,0x06,0x0F,0x00 },
-    [0x51] = { 0x1E,0x33,0x33,0x33,0x3B,0x1E,0x38,0x00 },
-    [0x52] = { 0x3F,0x66,0x66,0x3E,0x36,0x66,0x67,0x00 },
-    [0x53] = { 0x1E,0x33,0x07,0x0E,0x38,0x33,0x1E,0x00 },
-    [0x54] = { 0x3F,0x2D,0x0C,0x0C,0x0C,0x0C,0x1E,0x00 },
-    [0x55] = { 0x33,0x33,0x33,0x33,0x33,0x33,0x3F,0x00 },
-    [0x56] = { 0x33,0x33,0x33,0x33,0x33,0x1E,0x0C,0x00 },
-    [0x57] = { 0x63,0x63,0x63,0x6B,0x7F,0x77,0x63,0x00 },
-    [0x58] = { 0x63,0x63,0x36,0x1C,0x1C,0x36,0x63,0x00 },
-    [0x59] = { 0x33,0x33,0x33,0x1E,0x0C,0x0C,0x1E,0x00 },
-    [0x5A] = { 0x7F,0x63,0x31,0x18,0x4C,0x66,0x7F,0x00 },
-    [0x5B] = { 0x1E,0x06,0x06,0x06,0x06,0x06,0x1E,0x00 },
-    [0x5C] = { 0x03,0x06,0x0C,0x18,0x30,0x60,0x40,0x00 },
-    [0x5D] = { 0x1E,0x18,0x18,0x18,0x18,0x18,0x1E,0x00 },
-    [0x5E] = { 0x08,0x1C,0x36,0x63,0x00,0x00,0x00,0x00 },
-    [0x5F] = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF },
-    [0x60] = { 0x0C,0x0C,0x18,0x00,0x00,0x00,0x00,0x00 },
-    [0x61] = { 0x00,0x00,0x1E,0x30,0x3E,0x33,0x6E,0x00 },
-    [0x62] = { 0x07,0x06,0x06,0x3E,0x66,0x66,0x3B,0x00 },
-    [0x63] = { 0x00,0x00,0x1E,0x33,0x03,0x33,0x1E,0x00 },
-    [0x64] = { 0x38,0x30,0x30,0x3E,0x33,0x33,0x6E,0x00 },
-    [0x65] = { 0x00,0x00,0x1E,0x33,0x3F,0x03,0x1E,0x00 },
-    [0x66] = { 0x1C,0x36,0x06,0x0F,0x06,0x06,0x0F,0x00 },
-    [0x67] = { 0x00,0x00,0x6E,0x33,0x33,0x3E,0x30,0x1F },
-    [0x68] = { 0x07,0x06,0x36,0x6E,0x66,0x66,0x67,0x00 },
-    [0x69] = { 0x0C,0x00,0x0E,0x0C,0x0C,0x0C,0x1E,0x00 },
-    [0x6A] = { 0x30,0x00,0x30,0x30,0x30,0x33,0x33,0x1E },
-    [0x6B] = { 0x07,0x06,0x66,0x36,0x1E,0x36,0x67,0x00 },
-    [0x6C] = { 0x0E,0x0C,0x0C,0x0C,0x0C,0x0C,0x1E,0x00 },
-    [0x6D] = { 0x00,0x00,0x33,0x7F,0x7F,0x6B,0x63,0x00 },
-    [0x6E] = { 0x00,0x00,0x1F,0x33,0x33,0x33,0x33,0x00 },
-    [0x6F] = { 0x00,0x00,0x1E,0x33,0x33,0x33,0x1E,0x00 },
-    [0x70] = { 0x00,0x00,0x3B,0x66,0x66,0x3E,0x06,0x0F },
-    [0x71] = { 0x00,0x00,0x6E,0x33,0x33,0x3E,0x30,0x78 },
-    [0x72] = { 0x00,0x00,0x3B,0x6E,0x66,0x06,0x0F,0x00 },
-    [0x73] = { 0x00,0x00,0x3E,0x03,0x1E,0x30,0x1F,0x00 },
-    [0x74] = { 0x08,0x0C,0x3E,0x0C,0x0C,0x2C,0x18,0x00 },
-    [0x75] = { 0x00,0x00,0x33,0x33,0x33,0x33,0x6E,0x00 },
-    [0x76] = { 0x00,0x00,0x33,0x33,0x33,0x1E,0x0C,0x00 },
-    [0x77] = { 0x00,0x00,0x63,0x6B,0x7F,0x7F,0x36,0x00 },
-    [0x78] = { 0x00,0x00,0x63,0x36,0x1C,0x36,0x63,0x00 },
-    [0x79] = { 0x00,0x00,0x33,0x33,0x33,0x3E,0x30,0x1F },
-    [0x7A] = { 0x00,0x00,0x3F,0x19,0x0C,0x26,0x3F,0x00 },
-    [0x7B] = { 0x38,0x0C,0x0C,0x07,0x0C,0x0C,0x38,0x00 },
-    [0x7C] = { 0x18,0x18,0x18,0x00,0x18,0x18,0x18,0x00 },
-    [0x7D] = { 0x07,0x0C,0x0C,0x38,0x0C,0x0C,0x07,0x00 },
-    [0x7E] = { 0x6E,0x3B,0x00,0x00,0x00,0x00,0x00,0x00 },
-};
-
-/* ================= menu state ================= */
+// menu state
 
 enum menu_state { MENU_MAIN, MENU_CARTS, MENU_EMU };
 
@@ -121,39 +23,17 @@ typedef struct {
 } cart_entry;
 
 #define MAX_CARTS 64
-#define SCR_W 1280
-#define SCR_H 720
-#define CHAR_W 8
-#define CHAR_H 8
-#define FONT_SCALE 4
 #define WHITE RGBA8_MAXALPHA(255, 255, 255)
 
 static cart_entry carts[MAX_CARTS];
 static int        cart_count = 0;
 static int        menu_sel   = 0;
 static int        cart_top   = 0;
+static int        two_players_joycons = 0;
 static enum menu_state state = MENU_MAIN;
 
 static u32 *g_buf = NULL;
 static u32  g_stride = 0;
-
-/* ================= drawing helpers ================= */
-static inline void fb_pixel(int x, int y, u32 color)
-{
-    if (!g_buf) return;
-    if (x < 0 || x >= SCR_W || y < 0 || y >= SCR_H) return;
-    g_buf[(y * (g_stride / 4)) + x] = color;
-}
-
-static void fb_hline(int x0, int x1, int y, u32 color)
-{
-    if (!g_buf) return;
-    if (y < 0 || y >= SCR_H) return;
-    if (x0 < 0) x0 = 0;
-    if (x1 > SCR_W - 1) x1 = SCR_W - 1;
-    for (int x = x0; x <= x1; x++)
-        g_buf[(y * (g_stride / 4)) + x] = color;
-}
 
 static inline unsigned isqrt32(unsigned x)
 {
@@ -181,54 +61,10 @@ static inline unsigned curve15(unsigned n)
     return (unsigned)(((unsigned long)n * r) / 181);
 }
 
-static void draw_char(int x, int y, char c, u32 color)
-{
-    unsigned char uc = (unsigned char)c;
-    if (uc > 0x7E) uc = '?';
-    if (uc < 0x20) uc = ' ';
-    const uint8_t *glyph = font8x8_basic[uc];
-    for (int row = 0; row < CHAR_H; row++) {
-        uint8_t bits = glyph[row];
-        for (int col = 0; col < CHAR_W; col++) {
-            if (bits & (1 << col)) {
-                for (int sy = 0; sy < FONT_SCALE; sy++) {
-                    for (int sx = 0; sx < FONT_SCALE; sx++) {
-                        fb_pixel(x + col * FONT_SCALE + sx,
-                                 y + row * FONT_SCALE + sy,
-                                 color);
-                    }
-                }
-            }
-        }
-    }
-}
 
+// cart scanning / loading
 
-static void draw_text(int x, int y, const char *s, u32 color)
-{
-    while (*s) {
-        draw_char(x, y, *s, color);
-        x += CHAR_W * FONT_SCALE;
-        s++;
-    }
-}
-
-static int text_width(const char *s)
-{
-    int n = 0;
-    while (*s++) n++;
-    return n * CHAR_W * FONT_SCALE;
-}
-
-static void draw_text_centered(int cx, int y, const char *s, u32 color)
-{
-    draw_text(cx - text_width(s) / 2, y, s, color);
-}
-
-/* ================= cart scanning / loading ================= */
-
-static void scan_carts(void)
-{
+static void scan_carts(void){
     cart_count = 0;
     DIR *d = opendir("sdmc:/NX-trex/roms");
     if (!d) return;
@@ -254,8 +90,7 @@ static void scan_carts(void)
     closedir(d);
 }
 
-static int load_cart(const char *path)
-{
+static int load_cart(const char *path){
     FILE *f = fopen(path, "rb");
     if (!f) return 0;
     fseek(f, 0, SEEK_END);
@@ -273,59 +108,58 @@ static int load_cart(const char *path)
     return 1;
 }
 
-static void clear_cart(void)
-{
+static void clear_cart(void){
     cart_size = 0;
     cart_mask = 0;
     memset(cart, 0, sizeof(cart));
 }
 
-/* ================= menu rendering ================= */
+// menu rendering
 
 static void render_main_menu(void){
-    const char *items[] = { "RUN MINE STORM", "LOAD CART", "EXIT" };
-    const int n_items = 3;
-    const int cell  = CHAR_W * FONT_SCALE;
-    const int slot  = cell * (2 + 14);        // "> " + "RUN MINE STORM"
-    const int x0    = SCR_W / 2 - slot / 2;
+    const char *items[] = {
+        "RUN MINE STORM",
+        "LOAD CART",
+        two_players_joycons ? "2P MODE: ON" : "2P MODE: OFF",
+        "EXIT"
+    };
+    const int n_items = 4;
+    const int cell  = UI_CHAR_W * UI_FONT_SCALE;
+    const int slot  = cell * (2 + 14);
+    const int x0    = UI_SCR_W / 2 - slot / 2;
 
-    draw_text_centered(SCR_W / 2, 120, "VECTREX", WHITE);
-    fb_hline(SCR_W / 2 - 400, SCR_W / 2 + 400, 180, WHITE);
+    ui_text_centered(UI_SCR_W / 2, 120, "VECTREX", WHITE);
+    ui_hline(UI_SCR_W / 2 - 400, UI_SCR_W / 2 + 400, 180, WHITE);
 
     for (int i = 0; i < n_items; i++) {
-        int y = 300 + i * 64;
+        int y = 260 + i * 64;
         const char *prefix = (i == menu_sel) ? "> " : "  ";
-        draw_text(x0,                  y, prefix, WHITE);
-        draw_text(x0 + 2 * cell,       y, items[i], WHITE);
+        ui_text(x0,            y, prefix, WHITE);
+        ui_text(x0 + 2 * cell, y, items[i], WHITE);
     }
 }
 
-static void render_cart_menu(void)
-{
-    draw_text_centered(SCR_W / 2, 80, "VECTREX - CARTS", WHITE);
-    fb_hline(SCR_W / 2 - 400, SCR_W / 2 + 400, 140, WHITE);
+static void render_cart_menu(void){
+    ui_text_centered(UI_SCR_W / 2, 80, "VECTREX - CARTS", WHITE);
+    ui_hline(UI_SCR_W / 2 - 400, UI_SCR_W / 2 + 400, 140, WHITE);
 
-    const int cell     = CHAR_W * FONT_SCALE;
+    const int cell     = UI_CHAR_W * UI_FONT_SCALE;
     const int slot     = cell * (2 + 24);         /* "> " + up to 24-char names */
-    const int x0       = SCR_W / 2 - slot / 2;
+    const int x0       = UI_SCR_W / 2 - slot / 2;
     const int top_y    = 200;
     const int row_h    = 48;
     const int max_rows = 8;
     const int back_y   = top_y + max_rows * row_h + 20;
     
     if (cart_count == 0) {
-        draw_text_centered(SCR_W / 2, 320, "(NO CARTS FOUND)", WHITE);
-        draw_text_centered(SCR_W / 2, 380, "PUT .VEC FILES IN", WHITE);
-        draw_text_centered(SCR_W / 2, 430, "SD:/NX-TREX/ROMS/", WHITE);
+        ui_text_centered(UI_SCR_W / 2, 320, "(NO CARTS FOUND)", WHITE);
+        ui_text_centered(UI_SCR_W / 2, 380, "PUT .VEC FILES IN", WHITE);
+        ui_text_centered(UI_SCR_W / 2, 430, "SD:/NX-TREX/ROMS/", WHITE);
         int y = 520;
-        draw_text(x0, y, "> ", WHITE);
-        draw_text(x0 + 2 * cell, y, "BACK", WHITE);
+        ui_text(x0, y, "> ", WHITE);
+        ui_text(x0 + 2 * cell, y, "BACK", WHITE);
         return;
     }
-
-
-
-
 
     if (menu_sel < cart_top) cart_top = menu_sel;
     if (menu_sel >= cart_top + max_rows) cart_top = menu_sel - max_rows + 1;
@@ -335,47 +169,109 @@ static void render_cart_menu(void)
         int idx = cart_top + i;
         int y = top_y + i * row_h;
         const char *prefix = (idx == menu_sel) ? "> " : "  ";
-        draw_text(x0,            y, prefix, WHITE);
-        draw_text(x0 + 2 * cell, y, carts[idx].name, WHITE);
+        ui_text(x0,            y, prefix, WHITE);
+        ui_text(x0 + 2 * cell, y, carts[idx].name, WHITE);
     }
 
     int back_idx = cart_count;
     const char *bprefix = (menu_sel == back_idx) ? "> " : "  ";
-    draw_text(x0,            back_y, bprefix, WHITE);
-    draw_text(x0 + 2 * cell, back_y, "BACK", WHITE);
+    ui_text(x0,            back_y, bprefix, WHITE);
+    ui_text(x0 + 2 * cell, back_y, "BACK", WHITE);
 }
-// Returns 1 if we just transitioned into MENU_EMU this frame.
 
+
+/* Player 1 Vectrex buttons: 1P = B/A/Y/X, 2P = D-Pad Down/Right/Left/Up. */
+
+/* ------------------------------------------------------------------ *
+ * Menu input is always bound to Player 1's controller so that the whole
+ * menu can be driven from a single Joy-Con in either mode.
+ *
+ *   1P : both Joy-Con report as one pad.
+ *   2P : Player 1 is the Left Joy-Con held sideways; its analog stick is
+ *        read in the rotated orientation (the same rotation map_analog()
+ *        applies).
+ *
+ * Navigation is the left analog stick only (no D-Pad). Confirm / Back are
+ * Player 1's Vectrex buttons 4 and 1 (X / B in 1P, D-Pad Up / Down in 2P).
+ * ------------------------------------------------------------------ */
+static u64 menu_up(void)
+{
+    /* Analog stick only. On the rotated Left Joy-Con, on-screen "up" is the
+     * stick's right direction. */
+    return two_players_joycons
+        ? HidNpadButton_StickLRight
+        : HidNpadButton_StickLUp;
+}
+
+static u64 menu_down(void)
+{
+    return two_players_joycons
+        ? HidNpadButton_StickLLeft
+        : HidNpadButton_StickLDown;
+}
+
+static u64 menu_confirm(void)
+{
+    return two_players_joycons ? HidNpadButton_Right : HidNpadButton_X;   /* Player 1's button 4 */
+}
+
+static u64 menu_back(void)
+{
+    return two_players_joycons ? HidNpadButton_Left : HidNpadButton_B;   /* Player 1's button 1 */
+}
+
+/* Global hotkeys, available in every state, always bound to Player 1.
+ *   1P : the Joy-Con's own L / R shoulders.
+ *   2P : Player 1 is the Left Joy-Con held sideways, where SL / SR are its
+ *        L / R buttons, so those are used instead.
+ * Minus / Plus are kept as aliases. */
+static u64 sys_return(void)
+{
+    return two_players_joycons
+        ? (HidNpadButton_LeftSL | HidNpadButton_Minus)
+        : (HidNpadButton_L      | HidNpadButton_Minus);
+}
+
+static u64 sys_quit(void)
+{
+    return two_players_joycons
+        ? (HidNpadButton_LeftSR | HidNpadButton_Plus)
+        : (HidNpadButton_R      | HidNpadButton_Plus);
+}
+
+
+// Returns 1 if we just transitioned into MENU_EMU this frame.
 static int handle_menu_input(u64 k_down){
     if (state == MENU_MAIN) {
-        if (k_down & HidNpadButton_Up)   { if (menu_sel > 0) menu_sel--; }
-        if (k_down & HidNpadButton_Down) { if (menu_sel < 2) menu_sel++; }
+        if (k_down & menu_up())   { if (menu_sel > 0) menu_sel--; }
+        if (k_down & menu_down()) { if (menu_sel < 3) menu_sel++; }
 
-        if (k_down & HidNpadButton_A) {
+        if (k_down & menu_confirm()) {
             if (menu_sel == 0) {
-                clear_cart();
-                vecx_reset();
-                state = MENU_EMU;
-                return 1;
+                clear_cart(); vecx_reset();
+                state = MENU_EMU; return 1;
             } else if (menu_sel == 1) {
-                state = MENU_CARTS;
-                menu_sel = 0;
-                cart_top = 0;
+                state = MENU_CARTS; menu_sel = 0; cart_top = 0;
+            } else if (menu_sel == 2) {
+                two_players_joycons = !two_players_joycons;   /* toggle, stay in menu */
             }
-            // menu_sel == 2 (EXIT)
+            /* menu_sel == 3 (EXIT) handled by caller */
         }
     } else if (state == MENU_CARTS) {
         int n_items = cart_count + 1;
 
-        if (k_down & HidNpadButton_Up)   { if (menu_sel > 0) menu_sel--; }
-        if (k_down & HidNpadButton_Down) { if (menu_sel < n_items - 1) menu_sel++; }
-
-        if (k_down & HidNpadButton_B) {
+        if (k_down & menu_up()) {
+            if (menu_sel > 0) menu_sel--;
+        }
+        if (k_down & menu_down()) {
+            if (menu_sel < n_items - 1) menu_sel++;
+        }
+        if (k_down & menu_back()) {
             state = MENU_MAIN;
             menu_sel = 0;
         }
 
-        if (k_down & HidNpadButton_A) {
+        if (k_down & menu_confirm()) {
             if (menu_sel == cart_count) {
                 state = MENU_MAIN;
                 menu_sel = 0;
@@ -390,6 +286,56 @@ static int handle_menu_input(u64 k_down){
         }
     }
     return 0;
+}
+
+/* Fill alg_jch* from a stick, optionally rotating 90° for horizontal
+ * Joy-Con grip. In 2P mode, both sticks are rotated the same way:
+ *   sx = -y, sy = -x
+ * Set rotate = 1 for that, 0 for no rotation. */
+static void map_analog(HidAnalogStickState stick, int rotate,
+                       unsigned *out_x, unsigned *out_y)
+{
+    const int DEADZONE = 5000;
+
+    int sx, sy;
+    if (rotate == 1) {
+        sx = -stick.y;
+        sy = -stick.x;
+    } else if (rotate == 2) {
+        sx =  stick.y;
+        sy = -stick.x;
+    } else {
+        sx =  stick.x;
+        sy =  stick.y;
+    }
+
+    if (sx > -DEADZONE && sx < DEADZONE) sx = 0;
+    if (sy > -DEADZONE && sy < DEADZONE) sy = 0;
+
+    unsigned ax = (sx < 0) ? (unsigned)(-sx) : (unsigned)sx;
+    unsigned ay = (sy < 0) ? (unsigned)(-sy) : (unsigned)sy;
+    ax = curve15(ax);
+    ay = curve15(ay);
+
+    int cx = (sx < 0) ? -(int)ax : (int)ax;
+    int cy = (sy < 0) ? -(int)ay : (int)ay;
+
+    *out_x = (unsigned)(((cx + 32768) * 255) / 65535);
+    *out_y = (unsigned)(((cy + 32768) * 255) / 65535);
+}
+
+/* Map a set of four buttons into a nibble of snd_regs[14].
+ * `bits` is the button mask (already extracted by the caller),
+ * `shift` is 0 for P1 (lower nibble) or 4 for P2 (upper nibble). */
+static uint8_t map_buttons_into(uint8_t btns, u64 k,
+                                u64 b1, u64 b2, u64 b3, u64 b4,
+                                int shift)
+{
+    if (k & b1) btns &= ~(0x01 << shift);
+    if (k & b2) btns &= ~(0x02 << shift);
+    if (k & b3) btns &= ~(0x04 << shift);
+    if (k & b4) btns &= ~(0x08 << shift);
+    return btns;
 }
 
 // MAIN
@@ -424,42 +370,33 @@ int main(int argc, char **argv)
         padUpdate(&pad);
         u64 k_down = padGetButtonsDown(&pad);
 
-        if (k_down & HidNpadButton_Plus) { 
+        if (k_down & sys_quit()) { 
             exit_requested = 1; 
         }
 
         if (state == MENU_EMU) {
             u64 k = padGetButtons(&pad);
-            HidAnalogStickState stick = padGetStickPos(&pad, 0);
-            const int DEADZONE = 5000;
 
-            int sx = stick.x;
-            int sy = stick.y;
+            if (!two_players_joycons) {
+                /* 1P: left stick, no rotation.
+                * A/B/X/Y (as B,A,Y,X order) → P1 buttons 1-4. */
+                map_analog(padGetStickPos(&pad, 0), 0, &alg_jch0, &alg_jch1);
+                uint8_t btns = 0xFF;
+                btns = map_buttons_into(btns, k, HidNpadButton_B, HidNpadButton_A, HidNpadButton_Y, HidNpadButton_X, 0);
+                snd_regs[14] = btns;
+            } else {
+                /* 2P: both sticks rotated 90° (horizontal Joy-Con grip). */
+                map_analog(padGetStickPos(&pad, 0), 1, &alg_jch0, &alg_jch1);
+                map_analog(padGetStickPos(&pad, 1), 2, &alg_jch2, &alg_jch3);
+                uint8_t btns = 0xFF;
+                /* P1: lower nibble - Left, Down, Up, Right -> buttons 1-4 */
+                btns = map_buttons_into(btns, k, HidNpadButton_Left,  HidNpadButton_Down, HidNpadButton_Up,   HidNpadButton_Right, 0);
+                /* P2: upper nibble - A, X, B, Y -> buttons 1-4 */
+                btns = map_buttons_into(btns, k, HidNpadButton_A, HidNpadButton_X, HidNpadButton_B, HidNpadButton_Y, 4);
+                snd_regs[14] = btns;
+            }
 
-            if (sx > -DEADZONE && sx < DEADZONE) sx = 0;
-            if (sy > -DEADZONE && sy < DEADZONE) sy = 0;
-
-            /* Sign-magnitude curve, then remap -32767..32767 to 0..255 */
-            unsigned ax = (sx < 0) ? (unsigned)(-sx) : (unsigned)sx;
-            unsigned ay = (sy < 0) ? (unsigned)(-sy) : (unsigned)sy;
-
-            ax = curve15(ax);
-            ay = curve15(ay);
-
-            int cx = (sx < 0) ? -(int)ax : (int)ax;
-            int cy = (sy < 0) ? -(int)ay : (int)ay;
-
-            alg_jch0 = (unsigned)(((cx + 32768) * 255) / 65535);
-            alg_jch1 = (unsigned)(((cy + 32768) * 255) / 65535);
-
-            uint8_t btns = 0xFF;
-            if (k & HidNpadButton_A) btns &= ~0x01;
-            if (k & HidNpadButton_B) btns &= ~0x02;
-            if (k & HidNpadButton_X) btns &= ~0x04;
-            if (k & HidNpadButton_Y) btns &= ~0x08;
-            snd_regs[14] = btns;
-
-            if (k_down & HidNpadButton_Minus) {
+            if (k_down & sys_return()) {
                 state = MENU_MAIN;
                 menu_sel = 0;
             } else {
@@ -469,14 +406,16 @@ int main(int argc, char **argv)
         } else {
             // ---- menu tick
             handle_menu_input(k_down);
-            if (state == MENU_MAIN && (k_down & HidNpadButton_A) && menu_sel == 2)
+            if (state == MENU_MAIN && (k_down & menu_confirm()) && menu_sel == 3)
                 exit_requested = 1;
 
             if (!exit_requested && state != MENU_EMU) {
                 g_buf = osint_begin_ui(&g_stride);
                 if (g_buf) {
+                    ui_begin(g_buf, g_stride);
                     if (state == MENU_MAIN)       render_main_menu();
                     else if (state == MENU_CARTS) render_cart_menu();
+                    ui_end();
                     osint_end_ui();
                 }
                 g_buf = NULL;

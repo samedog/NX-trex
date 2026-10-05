@@ -1,0 +1,9 @@
+# build output
+build/
+*.elf
+*.nacp
+*.nro
+*.nsp
+*.nso
+*.npdm
+*.map

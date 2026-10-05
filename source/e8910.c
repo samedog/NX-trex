@@ -5,16 +5,18 @@
 #include <stdint.h>
 
 extern unsigned snd_regs[16];
-#define SAMPLE_RATE      22050          /* match SOUND_FREQ */
-#define BUFFER_SAMPLES   SOUND_SAMPLE   /* 1024 */
-#define NUM_BUFFERS      2
+
+/* libnx audout plays at a fixed 48000 Hz. The emulator produces audio once
+ * per 30 fps frame, so a buffer holds about a frame's worth of samples and
+ * a few buffers are queued to absorb jitter and dropped frames. */
+#define SOUND_FREQ      48000
+#define SOUND_SAMPLE    1024
+#define BUFFER_SAMPLES  SOUND_SAMPLE
+#define NUM_BUFFERS     3
 
 static AudioOutBuffer s_buffers[NUM_BUFFERS];
 static void           *s_buffer_data[NUM_BUFFERS];
 static bool            s_audio_ready;
-
-#define SOUND_FREQ   48000
-#define SOUND_SAMPLE  1024
 
 /***************************************************************************
 
@@ -436,7 +438,16 @@ static void e8910_generate(int16_t *stream, int length){
 		}
 
 vol = (vola * PSG.VolA + volb * PSG.VolB + volc * PSG.VolC) / (3 * STEP);
-if (--length & 1) *(buf1++) = (int16_t)(vol << 4);
+	/* vol is the AY mixer output, which lives in the volume domain:
+	 * 0..~4094 (i.e. ~= MAX_OUTPUT, 0xFFF). Scale by 8 to reach full
+	 * scale -- 4095 << 3 = 32760, which fits int16 and never wraps.
+	 * (<<4 overflows int16 and folds negative -> clipping/rasp;
+	 *  >>1 is 16x too quiet.) */
+	if (--length & 1) {
+		unsigned v = vol;
+		if (v > 4095) v = 4095;   /* 4095 << 3 = 32760, fits int16 */
+		*(buf1++) = (int16_t)(v << 3);
+	}
 	}
 }
 
@@ -514,19 +525,28 @@ void e8910_update(void)
     if (R_FAILED(audoutGetReleasedAudioOutBuffer(&released, &count)) || count == 0)
         return;
 
-    /* Generate 8-bit mono samples using the AY core */
+    /* The device plays at a fixed 48 kHz, which is ~1.5 buffers per 30 fps
+     * frame. Refilling only the first released buffer let the queue shrink
+     * and starve the output (dropouts), so drain every released buffer. */
     static int16_t mono[BUFFER_SAMPLES];
-    e8910_generate(mono, BUFFER_SAMPLES);
+    for (u32 i = 0; i < count && released; i++) {
+        AudioOutBuffer *next = released->next;
 
-    int16_t *out = (int16_t *)released->buffer;
-    for (int i = 0; i < BUFFER_SAMPLES; i++) {
-        out[i * 2]     = mono[i];
-        out[i * 2 + 1] = mono[i];
+        e8910_generate(mono, BUFFER_SAMPLES);
+
+        int16_t *out = (int16_t *)released->buffer;
+        for (int s = 0; s < BUFFER_SAMPLES; s++) {
+            out[s * 2]     = mono[s];
+            out[s * 2 + 1] = mono[s];
+        }
+
+        released->data_size   = BUFFER_SAMPLES * 2 * sizeof(int16_t);
+        released->data_offset = 0;
+        released->next        = NULL;
+        audoutAppendAudioOutBuffer(released);
+
+        released = next;
     }
-
-    released->data_size   = BUFFER_SAMPLES * 2 * sizeof(int16_t);
-    released->data_offset = 0;
-    audoutAppendAudioOutBuffer(released);
 }
 
 extern unsigned snd_regs[16];
