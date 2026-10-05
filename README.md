@@ -137,6 +137,25 @@ mapper are unchanged from VecX and behave identically.
 - Centre the audio output to remove the DC offset / note-onset transients
 - Test with more carts, especially edge cases (unusual sizes, non-standard headers)
 
+## Changelog
+
+### 2.0.0
+
+- Added 2-player mode: one Joy-Con per player, held sideways (Joy-Con L
+  is player 1, Joy-Con R is player 2).
+- Reworked menu navigation: analog stick only, confirm on button 4,
+  cancel on button 1, and the menu is always driven by player 1.
+- Moved return/quit to L/R (SL/SR in 2-player mode).
+- Audio fixes: the AY mixer output is scaled to fill 16-bit range without
+  overflowing (the old scale clipped and rasped), and all released audio
+  buffers are drained so the output no longer starves.
+- Split the bitmap font and menu helpers out of `main.c` into
+  `font8x8.c` and `ui.c`.
+
+### 1.0.0
+
+- Initial release.
+
 ## Credits
 
 - **VecX** by Valavan Manohararajah, the CPU, VIA, analog, and sound core
